@@ -3,7 +3,7 @@ import Foundation
 /// Intelligent routing system for selecting optimal AI model
 /// Analyzes intent and context to choose the best provider
 @MainActor
-final class IntelligentModelRouter: ObservableObject {
+final class IntelligentModelRouter {
 
     // MARK: - Dependencies
 
