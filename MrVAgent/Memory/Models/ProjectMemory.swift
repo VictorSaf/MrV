@@ -50,12 +50,14 @@ struct ProjectMemory: Identifiable, Codable {
         var secondaryColor: String  // Hex color
         var particleDensity: Float = 1.0
         var moodPreset: String?  // Mood preset name
+        var themePreset: String?  // Theme preset name (void, cosmos, forest, etc.)
 
         enum CodingKeys: String, CodingKey {
             case primaryColor
             case secondaryColor
             case particleDensity
             case moodPreset
+            case themePreset
         }
 
         // Custom coding for [String: Any]
@@ -63,12 +65,14 @@ struct ProjectMemory: Identifiable, Codable {
             primaryColor: String,
             secondaryColor: String,
             particleDensity: Float = 1.0,
-            moodPreset: String? = nil
+            moodPreset: String? = nil,
+            themePreset: String? = nil
         ) {
             self.primaryColor = primaryColor
             self.secondaryColor = secondaryColor
             self.particleDensity = particleDensity
             self.moodPreset = moodPreset
+            self.themePreset = themePreset
         }
 
         init(from decoder: Decoder) throws {
@@ -77,6 +81,7 @@ struct ProjectMemory: Identifiable, Codable {
             secondaryColor = try container.decode(String.self, forKey: .secondaryColor)
             particleDensity = try container.decode(Float.self, forKey: .particleDensity)
             moodPreset = try container.decodeIfPresent(String.self, forKey: .moodPreset)
+            themePreset = try container.decodeIfPresent(String.self, forKey: .themePreset)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -85,6 +90,7 @@ struct ProjectMemory: Identifiable, Codable {
             try container.encode(secondaryColor, forKey: .secondaryColor)
             try container.encode(particleDensity, forKey: .particleDensity)
             try container.encodeIfPresent(moodPreset, forKey: .moodPreset)
+            try container.encodeIfPresent(themePreset, forKey: .themePreset)
         }
     }
 

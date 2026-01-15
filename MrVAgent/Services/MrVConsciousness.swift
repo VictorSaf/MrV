@@ -31,11 +31,20 @@ final class MrVConsciousness: ObservableObject {
     private lazy var memorySystem: MemorySystem = {
         MemorySystem()
     }()
+    private lazy var universeManager: UniverseManager = {
+        UniverseManager(initialTheme: .void, fluidReality: fluidReality)
+    }()
 
     // MARK: - Memory State
 
     @Published var currentProjectName: String?
     @Published var isMemoryInitialized = false
+
+    // MARK: - Universe State
+
+    var currentUniverse: UniverseTheme {
+        universeManager.currentUniverse
+    }
 
     // MARK: - Consciousness State
 
@@ -64,12 +73,24 @@ final class MrVConsciousness: ObservableObject {
     func setFluidReality(_ engine: FluidRealityEngine) {
         self.fluidReality = engine
 
+        // Initialize universe manager
+        universeManager.setFluidReality(engine)
+
+        // Start surprise engine
+        universeManager.startSurpriseEngine()
+
         // Initialize memory system
         Task {
             do {
                 try await memorySystem.initialize()
                 isMemoryInitialized = true
                 currentProjectName = memorySystem.currentProject?.name
+
+                // Load project's universe theme
+                if let project = memorySystem.currentProject, let universeConfig = project.universeConfig {
+                    await loadProjectUniverse(universeConfig)
+                }
+
                 print("✅ Memory system initialized in MrVConsciousness")
             } catch {
                 print("❌ Failed to initialize memory: \(error)")
@@ -404,6 +425,41 @@ final class MrVConsciousness: ObservableObject {
         selectedProvider = provider
     }
 
+    // MARK: - Universe Management
+
+    /// Load project's universe theme
+    private func loadProjectUniverse(_ config: ProjectMemory.UniverseConfig) async {
+        // Check if preset theme
+        if let presetName = config.themePreset {
+            if let preset = UniverseManager.getPreset(named: presetName) {
+                await universeManager.switchUniverse(to: preset, animated: true)
+                return
+            }
+        }
+
+        // Use custom theme (future: deserialize from config)
+        print("🌌 Using custom universe theme (not yet implemented)")
+    }
+
+    /// Switch to project's universe
+    func switchToProjectUniverse(_ projectId: String) async {
+        guard let project = memorySystem.projects.first(where: { $0.id == projectId }) else {
+            return
+        }
+
+        if let universeConfig = project.universeConfig {
+            await loadProjectUniverse(universeConfig)
+        } else {
+            // No custom universe, use default
+            await universeManager.switchUniverse(to: .void, animated: true)
+        }
+    }
+
+    /// Get universe manager access
+    func getUniverseManager() -> UniverseManager {
+        return universeManager
+    }
+
     // MARK: - Memory Management
 
     /// Get memory system access
@@ -420,9 +476,19 @@ final class MrVConsciousness: ObservableObject {
 
     /// Switch to different project
     func switchProject(_ projectId: String) async throws {
+        print("🔄 Switching project...")
+
+        // Switch project in memory system
         try await memorySystem.switchProject(projectId)
         currentProjectName = memorySystem.currentProject?.name
-        print("🔄 Switched to project: \(currentProjectName ?? "Unknown")")
+
+        // Trigger universe transition
+        await switchToProjectUniverse(projectId)
+
+        // Clear conversation history (new context)
+        clearConversation()
+
+        print("✅ Switched to project: \(currentProjectName ?? "Unknown")")
     }
 
     /// Get all projects
