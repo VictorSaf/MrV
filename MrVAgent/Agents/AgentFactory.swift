@@ -18,7 +18,7 @@ final class AgentFactory: ObservableObject {
 
     // MARK: - Configuration
 
-    private let maxAgentsPerType: Int = 5
+    internal let maxAgentsPerType: Int = 5
     private let agentReuseEnabled: Bool = true
 
     // MARK: - Initialization
