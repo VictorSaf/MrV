@@ -5,6 +5,16 @@ import Foundation
 @MainActor
 final class IntelligentModelRouter: ObservableObject {
 
+    // MARK: - Dependencies
+
+    private let coordinator: AgentCoordinator
+
+    // MARK: - Initialization
+
+    init(coordinator: AgentCoordinator) {
+        self.coordinator = coordinator
+    }
+
     // MARK: - Task Intent
 
     enum TaskIntent {
@@ -56,24 +66,7 @@ final class IntelligentModelRouter: ObservableObject {
     }
 
     // MARK: - Provider Performance Tracking
-
-    struct ProviderStats {
-        var successCount: Int = 0
-        var failureCount: Int = 0
-        var averageResponseTime: Double = 0
-        var lastUsed: Date?
-
-        var successRate: Double {
-            let total = successCount + failureCount
-            return total > 0 ? Double(successCount) / Double(total) : 1.0
-        }
-
-        var isReliable: Bool {
-            successRate > 0.8 && (successCount + failureCount) > 5
-        }
-    }
-
-    @Published private(set) var providerStats: [AIProvider: ProviderStats] = [:]
+    // Note: Stats are now managed by AgentCoordinator
 
     // MARK: - Intent Analysis
 
@@ -118,26 +111,29 @@ final class IntelligentModelRouter: ObservableObject {
     // MARK: - Model Selection
 
     /// Select optimal model based on intent and availability
-    func selectOptimalModel(for input: String, currentProvider: AIProvider? = nil) -> AIProvider {
+    func selectOptimalModel(for input: String, currentProvider: AIProvider? = nil) async -> AIProvider {
         let intent = analyzeIntent(input)
+
+        // Get stats from coordinator
+        let stats = await coordinator.getProviderStats()
 
         // Get recommended provider
         let recommended = intent.recommendedProvider
 
         // Check if recommended provider is available
-        if isProviderAvailable(recommended) {
+        if isProviderAvailable(recommended, stats: stats) {
             return recommended
         }
 
         // Try fallbacks
         for fallback in intent.fallbackProviders {
-            if isProviderAvailable(fallback) {
+            if isProviderAvailable(fallback, stats: stats) {
                 return fallback
             }
         }
 
         // Last resort: use current provider if available
-        if let current = currentProvider, isProviderAvailable(current) {
+        if let current = currentProvider, isProviderAvailable(current, stats: stats) {
             return current
         }
 
@@ -157,7 +153,7 @@ final class IntelligentModelRouter: ObservableObject {
 
     // MARK: - Availability Check
 
-    private func isProviderAvailable(_ provider: AIProvider) -> Bool {
+    private func isProviderAvailable(_ provider: AIProvider, stats: [AIProvider: AgentCoordinator.ProviderStats]) -> Bool {
         // Check if provider is configured
         let service = AIServiceFactory.createService(for: provider)
         guard service.isConfigured else {
@@ -165,32 +161,15 @@ final class IntelligentModelRouter: ObservableObject {
         }
 
         // Check historical reliability
-        if let stats = providerStats[provider] {
-            return stats.isReliable || stats.successCount + stats.failureCount < 5
+        if let providerStats = stats[provider] {
+            return providerStats.isReliable || providerStats.successCount + providerStats.failureCount < 5
         }
 
         return true
     }
 
     // MARK: - Performance Tracking
-
-    func recordSuccess(for provider: AIProvider, responseTime: Double) {
-        var stats = providerStats[provider] ?? ProviderStats()
-        stats.successCount += 1
-        stats.lastUsed = Date()
-
-        // Update rolling average
-        let totalResponses = stats.successCount + stats.failureCount
-        stats.averageResponseTime = (stats.averageResponseTime * Double(totalResponses - 1) + responseTime) / Double(totalResponses)
-
-        providerStats[provider] = stats
-    }
-
-    func recordFailure(for provider: AIProvider) {
-        var stats = providerStats[provider] ?? ProviderStats()
-        stats.failureCount += 1
-        providerStats[provider] = stats
-    }
+    // Note: Recording is now handled by AgentCoordinator
 
     // MARK: - Intent Detection Helpers
 
@@ -226,14 +205,15 @@ final class IntelligentModelRouter: ObservableObject {
 
     // MARK: - Debug
 
-    func printStats() {
+    func printStats() async {
+        let stats = await coordinator.getProviderStats()
         print("=== Model Router Stats ===")
-        for (provider, stats) in providerStats {
+        for (provider, providerStats) in stats {
             print("\(provider.displayName):")
-            print("  Success: \(stats.successCount), Failures: \(stats.failureCount)")
-            print("  Success Rate: \(String(format: "%.1f", stats.successRate * 100))%")
-            print("  Avg Response: \(String(format: "%.2f", stats.averageResponseTime))s")
-            if let lastUsed = stats.lastUsed {
+            print("  Success: \(providerStats.successCount), Failures: \(providerStats.failureCount)")
+            print("  Success Rate: \(String(format: "%.1f", providerStats.successRate * 100))%")
+            print("  Avg Response: \(String(format: "%.2f", providerStats.averageResponseTime))s")
+            if let lastUsed = providerStats.lastUsed {
                 print("  Last Used: \(lastUsed)")
             }
         }

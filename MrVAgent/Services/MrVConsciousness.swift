@@ -18,8 +18,16 @@ final class MrVConsciousness: ObservableObject {
     // MARK: - Dependencies
 
     private weak var fluidReality: FluidRealityEngine?
-    private var conversationHistory: [Message] = []
-    private var modelRouter = IntelligentModelRouter()
+    private let coordinator = AgentCoordinator()
+    private lazy var modelRouter: IntelligentModelRouter = {
+        IntelligentModelRouter(coordinator: coordinator)
+    }()
+    private lazy var parallelOrchestrator: ParallelAIOrchestrator = {
+        ParallelAIOrchestrator(coordinator: coordinator)
+    }()
+    private lazy var backgroundProcessor: BackgroundProcessor = {
+        BackgroundProcessor(coordinator: coordinator)
+    }()
 
     // MARK: - Consciousness State
 
@@ -67,7 +75,7 @@ final class MrVConsciousness: ObservableObject {
 
         // Intelligent model routing (if enabled)
         if autoRouting {
-            let optimalProvider = modelRouter.selectOptimalModel(for: input, currentProvider: selectedProvider)
+            let optimalProvider = await modelRouter.selectOptimalModel(for: input, currentProvider: selectedProvider)
             if optimalProvider != selectedProvider {
                 print("🧠 Auto-routing: \(selectedProvider.displayName) → \(optimalProvider.displayName)")
                 selectedProvider = optimalProvider
@@ -86,9 +94,9 @@ final class MrVConsciousness: ObservableObject {
         // Change state to processing
         state = .processing
 
-        // Add user message to history
+        // Add user message to history (through coordinator)
         let userMessage = Message.user(input)
-        conversationHistory.append(userMessage)
+        await coordinator.appendMessage(userMessage)
 
         // Create user input fluid element (already done by InvisibleInput)
         // Now create response element
@@ -122,12 +130,26 @@ final class MrVConsciousness: ObservableObject {
         state = .responding
         currentResponse = ""
 
-        // Stream response from AI
+        // Query AI using parallel orchestrator
         let startTime = Date()
         do {
-            let stream = try await currentService.sendMessage(input, conversationHistory: conversationHistory)
+            let history = await coordinator.getConversationHistory()
+            let intent = modelRouter.analyzeIntent(input)
 
-            for try await chunk in stream {
+            // Use parallel orchestrator for multi-provider queries
+            let result = try await parallelOrchestrator.queryParallel(
+                input: input,
+                intent: intent,
+                conversationHistory: history,
+                strategy: .race  // Race multiple providers
+            )
+
+            // Update selected provider with winner
+            selectedProvider = result.provider
+            print("🏁 Query won by: \(result.provider.displayName)")
+
+            // Stream response
+            for try await chunk in result.stream {
                 currentResponse += chunk
 
                 // Update element with streaming text and crystallization
@@ -138,26 +160,38 @@ final class MrVConsciousness: ObservableObject {
                 )
             }
 
-            // Record success
+            // Record success (through coordinator)
             let responseTime = Date().timeIntervalSince(startTime)
-            modelRouter.recordSuccess(for: selectedProvider, responseTime: responseTime)
+            await coordinator.recordSuccess(provider: selectedProvider, responseTime: responseTime)
 
-            // Add to conversation history
+            // Add to conversation history (through coordinator)
             let assistantMessage = Message(
                 id: UUID(),
                 content: currentResponse,
                 isUser: false,
                 isStreaming: false
             )
-            conversationHistory.append(assistantMessage)
+            await coordinator.appendMessage(assistantMessage)
+
+            // Schedule background tasks
+            Task {
+                await backgroundProcessor.scheduleTask(.analyzePerformance)
+                await backgroundProcessor.scheduleTask(.optimizeRouting)
+
+                // Summarize if enough messages
+                let stats = await coordinator.getConversationStats()
+                if stats.totalMessages >= 10 {
+                    await backgroundProcessor.scheduleTask(.summarizeConversation(messageCount: stats.totalMessages))
+                }
+            }
 
             // Return to dormant state
             state = .dormant
             currentResponse = ""
 
         } catch {
-            // Record failure
-            modelRouter.recordFailure(for: selectedProvider)
+            // Record failure (through coordinator)
+            await coordinator.recordFailure(provider: selectedProvider)
 
             await handleError(error.localizedDescription)
 
@@ -267,7 +301,9 @@ final class MrVConsciousness: ObservableObject {
     // MARK: - Conversation Management
 
     func clearConversation() {
-        conversationHistory.removeAll()
+        Task {
+            await coordinator.clearHistory()
+        }
 
         // Dissolve all text elements
         if let fluidReality = fluidReality {

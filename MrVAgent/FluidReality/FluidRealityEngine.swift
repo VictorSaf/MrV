@@ -15,7 +15,7 @@ final class FluidRealityEngine: ObservableObject {
 
     // MARK: - Internal State
 
-    private var updateTimer: Timer?
+    private var updateTask: Task<Void, Never>?
     private let updateInterval: TimeInterval = 1.0 / 60.0  // 60 FPS
 
     // Text crystallization engine
@@ -52,7 +52,7 @@ final class FluidRealityEngine: ObservableObject {
     }
 
     deinit {
-        updateTimer?.invalidate()
+        updateTask?.cancel()
     }
 
     // MARK: - Void Control
@@ -61,18 +61,21 @@ final class FluidRealityEngine: ObservableObject {
         voidState.isActive = true
         timeState.startTime = Date()
 
-        // Start update loop
-        updateTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.update()
+        // Start update loop with structured concurrency
+        updateTask = Task { @MainActor [weak self] in
+            while let self = self, !Task.isCancelled {
+                await self.update()
+
+                // Sleep for update interval (60 FPS)
+                try? await Task.sleep(nanoseconds: UInt64(updateInterval * 1_000_000_000))
             }
         }
     }
 
     func stopVoid() {
         voidState.isActive = false
-        updateTimer?.invalidate()
-        updateTimer = nil
+        updateTask?.cancel()
+        updateTask = nil
     }
 
     // MARK: - Element Management
