@@ -175,6 +175,50 @@ final class FluidRealityEngine: ObservableObject {
         voidState.breathingIntensity = intensity
     }
 
+    // MARK: - Universe Theme Application
+
+    /// Apply a complete universe theme to the fluid reality system
+    func applyUniverseTheme(_ theme: UniverseTheme) {
+        print("🎨 Applying universe theme: \(theme.name)")
+
+        // Update background colors
+        setBaseColor(theme.colors.background.color)
+
+        // Update breathing intensity from effects
+        setBreathingIntensity(Float(theme.effects.breathing.intensity))
+
+        // Apply particle configuration
+        // TODO: When ParticleSystem is integrated, update particle settings here
+        // particleSystem?.updateConfiguration(theme.particles)
+
+        // Apply visual effects
+        // TODO: When blur/glow effects are integrated, update them here
+        // blurEffect?.updateIntensity(theme.effects.blur.intensity)
+        // glowEffect?.updateIntensity(theme.effects.glow.intensity)
+
+        // Update mood if theme has default mood
+        let defaultMood = theme.mood.defaultMood
+        if let mood = MoodState(rawValue: defaultMood) {
+            moodManager.setMoodImmediate(mood)
+        }
+
+        print("✅ Universe theme applied successfully")
+    }
+
+    /// Gradually transition to a new universe theme
+    func transitionToUniverseTheme(_ theme: UniverseTheme, duration: TimeInterval = 2.0) async {
+        print("🌀 Transitioning to universe theme: \(theme.name) over \(duration)s")
+
+        // For now, apply immediately
+        // TODO: Implement smooth color/effect interpolation
+        applyUniverseTheme(theme)
+
+        // Wait for duration to simulate transition
+        try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+
+        print("✅ Universe theme transition complete")
+    }
+
     // MARK: - Element Queries
 
     /// Get all text elements

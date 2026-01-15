@@ -193,8 +193,8 @@ final class UniverseManager: ObservableObject {
 
         print("🎨 Applying universe theme: \(theme.name)")
 
-        // Background colors handled by Metal shader
-        // Future: Update shader uniforms with theme colors
+        // Apply theme to FluidRealityEngine
+        fluidReality.applyUniverseTheme(theme)
 
         // Update particle system
         await updateParticleSystem(with: theme.particles)
