@@ -10,6 +10,8 @@ struct BackgroundUniforms {
     float3 baseColor;
     float breathingIntensity;
     float noiseScale;
+    float2 cursorVelocity;     // Speed and direction
+    float2 cursorHistory[10];  // Last 10 cursor positions
 };
 
 struct VertexOut {
@@ -106,19 +108,53 @@ fragment float4 backgroundFragmentShader(
 
     float noiseValue = fbm(noiseCoord);
 
-    // Cursor influence (subtle ripple)
+    // Advanced cursor influence
     float2 cursorCoord = uniforms.cursorPosition;
     cursorCoord.y = 1.0 - cursorCoord.y; // Flip Y coordinate
-    float2 toCenter = coord - (cursorCoord * uniforms.resolution / uniforms.resolution.y);
-    float distanceToCenter = length(toCenter);
+    float2 toCursor = coord - (cursorCoord * uniforms.resolution / uniforms.resolution.y);
+    float distanceToCursor = length(toCursor);
 
-    // Ripple effect
-    float ripple = sin(distanceToCenter * 10.0 - uniforms.time * 2.0) * 0.5 + 0.5;
-    ripple *= exp(-distanceToCenter * 2.0); // Fade with distance
-    ripple *= 0.2; // Subtle intensity
+    // Multi-ripple from cursor history
+    float ripple = 0.0;
+    for (int i = 0; i < 10; i++) {
+        float2 historyPos = uniforms.cursorHistory[i];
+        historyPos.y = 1.0 - historyPos.y;
+        float2 toHistory = coord - (historyPos * uniforms.resolution / uniforms.resolution.y);
+        float dist = length(toHistory);
+
+        // Age-based intensity (older = weaker)
+        float age = float(i) / 10.0;
+        float intensity = (1.0 - age) * 0.15;
+
+        // Ripple wave
+        float wave = sin(dist * 12.0 - uniforms.time * 3.0 - float(i) * 0.5) * 0.5 + 0.5;
+        wave *= exp(-dist * 1.5);
+        ripple += wave * intensity;
+    }
+
+    // Velocity-based directional distortion
+    float speed = length(uniforms.cursorVelocity);
+    float velocityEffect = 0.0;
+    if (speed > 0.01) {
+        float2 normalizedVel = normalize(uniforms.cursorVelocity);
+        float directionInfluence = dot(normalize(toCursor), normalizedVel);
+        velocityEffect = directionInfluence * speed * 0.3;
+        velocityEffect *= exp(-distanceToCursor * 1.0);
+    }
+
+    // Speed-based color shift
+    float3 speedColor = float3(0.0);
+    if (speed > 0.05) {
+        float speedIntensity = clamp(speed * 2.0, 0.0, 1.0);
+        speedColor = float3(
+            speedIntensity * 0.1,
+            speedIntensity * 0.05,
+            speedIntensity * 0.15
+        );
+    }
 
     // Combine effects
-    float finalNoise = noiseValue + ripple;
+    float finalNoise = noiseValue + ripple + velocityEffect;
 
     // Color gradient based on time
     float timePhase = uniforms.time * 0.1;
@@ -129,7 +165,7 @@ fragment float4 backgroundFragmentShader(
     );
 
     // Final color
-    float3 color = uniforms.baseColor + colorShift;
+    float3 color = uniforms.baseColor + colorShift + speedColor;
     color += finalNoise * 0.15; // Add noise influence
     color = clamp(color, 0.0, 1.0);
 
