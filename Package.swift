@@ -18,8 +18,10 @@ let package = Package(
             name: "MrVAgent",
             dependencies: [],
             path: "MrVAgent",
+            exclude: ["MrVAgent.entitlements", "Info.plist"],
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
+                .process("Metal/Shaders")
             ]
         )
     ]
