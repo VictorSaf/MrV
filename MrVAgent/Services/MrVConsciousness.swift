@@ -239,7 +239,7 @@ final class MrVConsciousness: ObservableObject {
             if isMemoryInitialized {
                 Task {
                     do {
-                        let mood = fluidReality?.moodManager.currentMood.rawValue
+                        let mood = fluidReality.moodManager.currentMood.rawValue
                         try await memorySystem.storeConversation(
                             userInput: input,  // Store original input, not contextual prompt
                             aiResponse: currentResponse,

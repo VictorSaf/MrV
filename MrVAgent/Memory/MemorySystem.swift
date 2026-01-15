@@ -19,8 +19,12 @@ class MemorySystem: ObservableObject {
     private lazy var knowledgeGraph: KnowledgeGraph = {
         KnowledgeGraph(db: db)
     }()
+    private lazy var decisionDetector: DecisionDetector = {
+        DecisionDetector()
+    }()
     private var sessionStartTime = Date()
     private var sessionConversations: [ConversationMemory] = []
+    private var autoDetectDecisions = true  // Enable automatic decision detection
 
     // MARK: - Configuration
 
@@ -221,6 +225,26 @@ class MemorySystem: ObservableObject {
         // Update project timestamp
         if let projectId = currentProject?.id {
             try await updateProjectTimestamp(projectId)
+        }
+
+        // Auto-detect and log decisions
+        if autoDetectDecisions {
+            Task {
+                if let decision = await decisionDetector.detectDecision(from: conversation) {
+                    do {
+                        try await storeDecision(
+                            decisionText: decision.decisionText,
+                            rationale: decision.rationale,
+                            alternatives: decision.alternatives,
+                            owner: decision.owner,
+                            tags: decision.tags
+                        )
+                        print("🤔 Decision auto-detected: \(decision.decisionText.prefix(50))...")
+                    } catch {
+                        print("⚠️ Failed to store auto-detected decision: \(error)")
+                    }
+                }
+            }
         }
     }
 
@@ -453,6 +477,41 @@ class MemorySystem: ObservableObject {
     func extractKnowledgeFromLastConversation() async throws {
         guard let lastConversation = sessionConversations.last else { return }
         try await knowledgeGraph.extractKnowledge(from: lastConversation, projectId: currentProject?.id)
+    }
+
+    // MARK: - Decision Detection Control
+
+    /// Enable/disable automatic decision detection
+    func setAutoDetectDecisions(_ enabled: Bool) {
+        autoDetectDecisions = enabled
+    }
+
+    /// Manually trigger decision detection on conversation
+    func detectDecisionFrom(conversationId: String) async throws -> DecisionLog? {
+        // Find conversation
+        let sql = "SELECT * FROM conversations WHERE id = ?;"
+        guard let row = try await db.queryOne(sql, parameters: [conversationId]),
+              let conversation = try? conversationFromRow(row) else {
+            return nil
+        }
+
+        return await decisionDetector.detectDecision(from: conversation)
+    }
+
+    /// Batch detect decisions from recent conversations
+    func scanRecentConversationsForDecisions(limit: Int = 20) async throws -> [DecisionLog] {
+        let sql = """
+        SELECT * FROM conversations
+        ORDER BY timestamp DESC
+        LIMIT ?;
+        """
+
+        let rows = try await db.query(sql, parameters: [limit])
+        let conversations = rows.compactMap { row in
+            try? conversationFromRow(row)
+        }
+
+        return await decisionDetector.detectDecisionsFromBatch(conversations)
     }
 
     // MARK: - Private Helpers

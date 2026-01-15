@@ -63,6 +63,18 @@ final class IntelligentModelRouter {
                 return [.claude, .openAI, .perplexity]
             }
         }
+
+        var description: String {
+            switch self {
+            case .conversation: return "conversation"
+            case .coding: return "coding"
+            case .research: return "research"
+            case .creative: return "creative"
+            case .analysis: return "analysis"
+            case .technical: return "technical"
+            case .quickResponse: return "quick_response"
+            }
+        }
     }
 
     // MARK: - Provider Performance Tracking
