@@ -277,8 +277,8 @@ final class MrVConsciousness: ObservableObject {
                 position: errorPosition,
                 content: .text("⚠️ \(message)"),
                 style: FluidElement.ElementStyle(
-                    font: .system(size: 14, weight: .medium),
-                    foregroundColor: .red.opacity(0.8),
+                    font: Font.system(size: 14, weight: .medium),
+                    foregroundColor: Color.red.opacity(0.8),
                     glowIntensity: 0.3
                 )
             )

@@ -32,6 +32,13 @@ struct MrVAgentApp: App {
                     // Settings will be opened via toolbar button in MainView
                 }
                 .keyboardShortcut(",", modifiers: .command)
+
+                Button("Run System Tests") {
+                    Task { @MainActor in
+                        await runMultiAgentTests()
+                    }
+                }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
             }
         }
     }
