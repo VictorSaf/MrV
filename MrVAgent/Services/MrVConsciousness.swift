@@ -13,11 +13,13 @@ final class MrVConsciousness: ObservableObject {
     @Published var selectedProvider: AIProvider = .claude
     @Published var currentResponse: String = ""
     @Published var errorMessage: String?
+    @Published var autoRouting: Bool = true  // Enable intelligent routing
 
     // MARK: - Dependencies
 
     private weak var fluidReality: FluidRealityEngine?
     private var conversationHistory: [Message] = []
+    private var modelRouter = IntelligentModelRouter()
 
     // MARK: - Consciousness State
 
@@ -62,6 +64,15 @@ final class MrVConsciousness: ObservableObject {
     /// Process user input and generate response
     func processInput(_ input: String) async {
         guard !input.isEmpty else { return }
+
+        // Intelligent model routing (if enabled)
+        if autoRouting {
+            let optimalProvider = modelRouter.selectOptimalModel(for: input, currentProvider: selectedProvider)
+            if optimalProvider != selectedProvider {
+                print("🧠 Auto-routing: \(selectedProvider.displayName) → \(optimalProvider.displayName)")
+                selectedProvider = optimalProvider
+            }
+        }
 
         // Check if service is configured
         guard currentService.isConfigured else {
@@ -109,6 +120,7 @@ final class MrVConsciousness: ObservableObject {
         currentResponse = ""
 
         // Stream response from AI
+        let startTime = Date()
         do {
             let stream = try await currentService.sendMessage(input, conversationHistory: conversationHistory)
 
@@ -122,6 +134,10 @@ final class MrVConsciousness: ObservableObject {
                     config: .fast  // Fast crystallization for AI responses
                 )
             }
+
+            // Record success
+            let responseTime = Date().timeIntervalSince(startTime)
+            modelRouter.recordSuccess(for: selectedProvider, responseTime: responseTime)
 
             // Add to conversation history
             let assistantMessage = Message(
@@ -137,6 +153,9 @@ final class MrVConsciousness: ObservableObject {
             currentResponse = ""
 
         } catch {
+            // Record failure
+            modelRouter.recordFailure(for: selectedProvider)
+
             await handleError(error.localizedDescription)
 
             // Remove the empty response element
