@@ -99,7 +99,7 @@ struct InvisibleInputView: View {
     }
 
     private func processInput(_ text: String) {
-        // Create fluid element for user input
+        // Create fluid element for user input with crystallization
         let userElement = FluidElement(
             type: .text(text),
             position: fluidReality.calculateOptimalTextPosition(
@@ -113,7 +113,8 @@ struct InvisibleInputView: View {
             )
         )
 
-        fluidReality.materializeElement(userElement)
+        // Materialize with crystallization effect
+        fluidReality.materializeElementWithCrystallization(userElement)
 
         // TODO: Send to MrV Consciousness (Pas 0.7)
         // For now, just echo back
@@ -142,7 +143,11 @@ struct InvisibleInputView: View {
             )
         )
 
-        fluidReality.materializeElement(responseElement)
+        // Materialize with crystallization effect (slower for responses)
+        fluidReality.materializeElementWithCrystallization(
+            responseElement,
+            config: .slow
+        )
 
         // Auto-dissolve after 5 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {

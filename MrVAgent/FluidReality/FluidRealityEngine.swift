@@ -18,6 +18,11 @@ final class FluidRealityEngine: ObservableObject {
     private var updateTimer: Timer?
     private let updateInterval: TimeInterval = 1.0 / 60.0  // 60 FPS
 
+    // Text crystallization engine
+    private lazy var crystallization: TextCrystallization = {
+        TextCrystallization(fluidReality: self)
+    }()
+
     // MARK: - Void State
 
     struct VoidState: Equatable {
@@ -77,6 +82,40 @@ final class FluidRealityEngine: ObservableObject {
         newElement.lifecycle.age = 0
 
         activeElements.append(newElement)
+    }
+
+    /// Materialize element with text crystallization effect
+    func materializeElementWithCrystallization(
+        _ element: FluidElement,
+        config: TextCrystallization.CrystallizationConfig = .default,
+        completion: (() -> Void)? = nil
+    ) {
+        // Create element with empty text initially
+        var newElement = element
+        if case .text(let text) = element.content {
+            newElement.content = .text("")  // Start empty
+            materializeElement(newElement)
+
+            // Begin crystallization
+            crystallization.crystallize(
+                text: text,
+                elementId: newElement.id,
+                config: config,
+                completion: completion
+            )
+        } else {
+            // Non-text elements materialize normally
+            materializeElement(element)
+        }
+    }
+
+    /// Update element text with streaming (for AI responses)
+    func updateElementTextStreaming(
+        _ elementId: UUID,
+        newText: String,
+        config: TextCrystallization.CrystallizationConfig = .fast
+    ) {
+        crystallization.updateStreamingText(newText, elementId: elementId, config: config)
     }
 
     /// Begin dissolving an element
