@@ -12,6 +12,7 @@ final class MetalRenderer: NSObject {
     private let commandQueue: MTLCommandQueue
     private var pipelineState: MTLRenderPipelineState?
     private var startTime: CFAbsoluteTime
+    private var particleSystem: ParticleSystem?
 
     // MARK: - Uniforms
 
@@ -53,9 +54,14 @@ final class MetalRenderer: NSObject {
         super.init()
 
         setupPipeline()
+        setupParticleSystem()
     }
 
     // MARK: - Pipeline Setup
+
+    private func setupParticleSystem() {
+        particleSystem = ParticleSystem(device: device, commandQueue: commandQueue)
+    }
 
     private func setupPipeline() {
         guard let library = device.makeDefaultLibrary() else {
@@ -92,6 +98,9 @@ final class MetalRenderer: NSObject {
             Float(cursorPosition.x / viewSize.width),
             Float(cursorPosition.y / viewSize.height)
         )
+
+        // Update particle system
+        particleSystem?.update(deltaTime: Float(deltaTime), viewSize: viewSize)
     }
 
     /// Update base color (for mood changes)
@@ -140,9 +149,24 @@ final class MetalRenderer: NSObject {
                                      vertexStart: 0,
                                      vertexCount: 4)
 
+        // Render particles on top of background
+        particleSystem?.render(to: renderEncoder)
+
         renderEncoder.endEncoding()
 
         commandBuffer.present(drawable)
         commandBuffer.commit()
+    }
+
+    // MARK: - Particle Control
+
+    /// Emit particles at a specific position
+    func emitParticles(at position: CGPoint, count: Int, type: ParticleSystem.ParticleType) {
+        particleSystem?.emit(at: position, count: count, type: type)
+    }
+
+    /// Get active particle count
+    var activeParticleCount: Int {
+        particleSystem?.activeCount ?? 0
     }
 }
