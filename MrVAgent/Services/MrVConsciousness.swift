@@ -74,6 +74,9 @@ final class MrVConsciousness: ObservableObject {
             }
         }
 
+        // Detect and transition mood based on input
+        fluidReality?.moodManager.detectAndTransition(from: input)
+
         // Check if service is configured
         guard currentService.isConfigured else {
             await handleError("Please configure \(selectedProvider.displayName) in Settings first.")

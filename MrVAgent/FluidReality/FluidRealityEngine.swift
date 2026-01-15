@@ -23,6 +23,9 @@ final class FluidRealityEngine: ObservableObject {
         TextCrystallization(fluidReality: self)
     }()
 
+    // Mood manager
+    @Published var moodManager = MoodManager()
+
     // MARK: - Void State
 
     struct VoidState: Equatable {
