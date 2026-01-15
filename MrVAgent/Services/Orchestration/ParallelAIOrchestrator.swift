@@ -100,7 +100,6 @@ actor ParallelAIOrchestrator {
             }
 
             // Return first successful result
-            var lastError: Error?
             for try await result in group {
                 if let result = result {
                     // Cancel remaining tasks
@@ -110,7 +109,7 @@ actor ParallelAIOrchestrator {
             }
 
             // All queries failed
-            throw lastError ?? OrchestratorError.allProvidersFailed
+            throw OrchestratorError.allProvidersFailed
         }
     }
 
@@ -144,8 +143,6 @@ actor ParallelAIOrchestrator {
         input: String,
         conversationHistory: [Message]
     ) async throws -> QueryResult {
-        var lastError: Error?
-
         for provider in providers {
             if let result = await queryProvider(
                 provider: provider,
@@ -156,7 +153,7 @@ actor ParallelAIOrchestrator {
             }
         }
 
-        throw lastError ?? OrchestratorError.allProvidersFailed
+        throw OrchestratorError.allProvidersFailed
     }
 
     /// Query multiple providers and merge responses (experimental)
