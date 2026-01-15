@@ -44,10 +44,4 @@ struct VoidView: View {
     }
 }
 
-/// Temporary placeholder for invisible input
-/// Will be implemented in Pas 0.5
-private struct InvisibleInputView: View {
-    var body: some View {
-        EmptyView()
-    }
-}
+// InvisibleInputView now imported from Input/InvisibleInput.swift
