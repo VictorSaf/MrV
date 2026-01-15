@@ -3,18 +3,20 @@ import SwiftUI
 @main
 struct MrVAgentApp: App {
     @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var fluidReality = FluidRealityEngine()
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if authViewModel.isAuthenticated {
-                    MainView()
+                    VoidView()
+                        .environmentObject(fluidReality)
                 } else {
                     AuthenticationView()
                         .environmentObject(authViewModel)
                 }
             }
-            .frame(minWidth: 800, minHeight: 600)
+            .frame(minWidth: 1280, minHeight: 800)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
