@@ -4,6 +4,7 @@ import SwiftUI
 /// Text appears subtly as user types, disappears on submit
 struct InvisibleInputView: View {
     @EnvironmentObject var fluidReality: FluidRealityEngine
+    @EnvironmentObject var consciousness: MrVConsciousness
     @State private var inputText: String = ""
     @FocusState private var isFocused: Bool
     @State private var showInputIndicator: Bool = false
@@ -116,42 +117,9 @@ struct InvisibleInputView: View {
         // Materialize with crystallization effect
         fluidReality.materializeElementWithCrystallization(userElement)
 
-        // TODO: Send to MrV Consciousness (Pas 0.7)
-        // For now, just echo back
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            createEchoResponse(for: text)
-        }
-    }
-
-    // Temporary echo response (until Pas 0.7)
-    private func createEchoResponse(for input: String) {
-        let responseElement = FluidElement(
-            type: .text("Echo: \(input)"),
-            position: FluidElement.FluidPosition(
-                x: fluidReality.voidState.cursorPosition.x,
-                y: fluidReality.voidState.cursorPosition.y + 50,
-                z: 0.1,
-                opacity: 1.0,
-                scale: 1.0,
-                rotation: 0
-            ),
-            content: .text("Echo: \(input)"),
-            style: FluidElement.ElementStyle(
-                font: .system(size: 16, weight: .light),
-                foregroundColor: .blue.opacity(0.8),
-                glowIntensity: 0.3
-            )
-        )
-
-        // Materialize with crystallization effect (slower for responses)
-        fluidReality.materializeElementWithCrystallization(
-            responseElement,
-            config: .slow
-        )
-
-        // Auto-dissolve after 5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            fluidReality.dissolveElement(responseElement.id)
+        // Send to MrV Consciousness for AI processing
+        Task {
+            await consciousness.processInput(text)
         }
     }
 }

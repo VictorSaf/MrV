@@ -3,8 +3,14 @@ import SwiftUI
 /// Main void interface - abstract fluid reality system
 struct VoidView: View {
     @EnvironmentObject var fluidReality: FluidRealityEngine
+    @StateObject private var consciousness: MrVConsciousness
     @State private var cursorPosition: CGPoint = .zero
     @State private var viewSize: CGSize = .zero
+
+    init() {
+        // Initialize consciousness (will be connected to fluidReality in onAppear)
+        _consciousness = StateObject(wrappedValue: MrVConsciousness())
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -32,10 +38,13 @@ struct VoidView: View {
 
                 // Invisible input (handled separately)
                 InvisibleInputView()
+                    .environmentObject(consciousness)
             }
             .preferredColorScheme(.dark)
             .onAppear {
                 viewSize = geometry.size
+                // Connect consciousness to fluid reality
+                consciousness.setFluidReality(fluidReality)
             }
             .onChange(of: geometry.size) { newSize in
                 viewSize = newSize
