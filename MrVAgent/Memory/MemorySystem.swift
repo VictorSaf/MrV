@@ -16,6 +16,9 @@ class MemorySystem: ObservableObject {
     // MARK: - Dependencies
 
     private let db: SQLiteManager
+    private lazy var knowledgeGraph: KnowledgeGraph = {
+        KnowledgeGraph(db: db)
+    }()
     private var sessionStartTime = Date()
     private var sessionConversations: [ConversationMemory] = []
 
@@ -417,6 +420,39 @@ class MemorySystem: ObservableObject {
     func clearSession() {
         sessionConversations = []
         sessionStartTime = Date()
+    }
+
+    // MARK: - Knowledge Graph Operations
+
+    /// Get knowledge graph instance
+    func getKnowledgeGraph() -> KnowledgeGraph {
+        return knowledgeGraph
+    }
+
+    /// Search knowledge for relevant concepts
+    func searchKnowledge(_ query: String, limit: Int = 10) async throws -> [KnowledgeNode] {
+        return try await knowledgeGraph.findNodes(matching: query, projectId: currentProject?.id, limit: limit)
+    }
+
+    /// Get knowledge by type
+    func getKnowledge(ofType type: KnowledgeNode.NodeType) async throws -> [KnowledgeNode] {
+        return try await knowledgeGraph.getNodesByType(type, projectId: currentProject?.id)
+    }
+
+    /// Add knowledge node
+    func addKnowledge(_ node: KnowledgeNode) async throws {
+        try await knowledgeGraph.addNode(node)
+    }
+
+    /// Find related knowledge
+    func findRelatedKnowledge(to nodeId: String, depth: Int = 2) async throws -> [KnowledgeNode] {
+        return try await knowledgeGraph.findRelated(to: nodeId, depth: depth)
+    }
+
+    /// Extract knowledge from conversation automatically
+    func extractKnowledgeFromLastConversation() async throws {
+        guard let lastConversation = sessionConversations.last else { return }
+        try await knowledgeGraph.extractKnowledge(from: lastConversation, projectId: currentProject?.id)
     }
 
     // MARK: - Private Helpers

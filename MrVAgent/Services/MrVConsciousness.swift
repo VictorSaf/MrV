@@ -28,6 +28,14 @@ final class MrVConsciousness: ObservableObject {
     private lazy var backgroundProcessor: BackgroundProcessor = {
         BackgroundProcessor(coordinator: coordinator)
     }()
+    private lazy var memorySystem: MemorySystem = {
+        MemorySystem()
+    }()
+
+    // MARK: - Memory State
+
+    @Published var currentProjectName: String?
+    @Published var isMemoryInitialized = false
 
     // MARK: - Consciousness State
 
@@ -55,6 +63,18 @@ final class MrVConsciousness: ObservableObject {
 
     func setFluidReality(_ engine: FluidRealityEngine) {
         self.fluidReality = engine
+
+        // Initialize memory system
+        Task {
+            do {
+                try await memorySystem.initialize()
+                isMemoryInitialized = true
+                currentProjectName = memorySystem.currentProject?.name
+                print("✅ Memory system initialized in MrVConsciousness")
+            } catch {
+                print("❌ Failed to initialize memory: \(error)")
+            }
+        }
     }
 
     // MARK: - AI Service
@@ -133,12 +153,54 @@ final class MrVConsciousness: ObservableObject {
         // Query AI using parallel orchestrator
         let startTime = Date()
         do {
+            // Get conversation history from coordinator
             let history = await coordinator.getConversationHistory()
             let intent = modelRouter.analyzeIntent(input)
 
-            // Use parallel orchestrator for multi-provider queries
+            // Get relevant context from memory system (if initialized)
+            var contextualPrompt = input
+            if isMemoryInitialized {
+                do {
+                    // Get recent conversations for context
+                    let relevantContext = try await memorySystem.getRelevantContext(for: input, limit: 5)
+
+                    // Search knowledge graph for mentioned concepts
+                    let knowledge = try await memorySystem.searchKnowledge(input, limit: 5)
+
+                    // Build enhanced prompt with context
+                    if !relevantContext.isEmpty || !knowledge.isEmpty {
+                        var contextParts: [String] = []
+
+                        if !relevantContext.isEmpty {
+                            let recentSummary = relevantContext.map { conv in
+                                "Q: \(conv.userInput.prefix(100))\nA: \(conv.aiResponse.prefix(100))"
+                            }.joined(separator: "\n\n")
+                            contextParts.append("Recent context:\n\(recentSummary)")
+                        }
+
+                        if !knowledge.isEmpty {
+                            let knowledgeSummary = knowledge.map { node in
+                                "\(node.type.icon) \(node.name): \(node.content.description ?? "")"
+                            }.joined(separator: "\n")
+                            contextParts.append("Relevant knowledge:\n\(knowledgeSummary)")
+                        }
+
+                        if let projectName = currentProjectName {
+                            contextParts.insert("Current project: \(projectName)", at: 0)
+                        }
+
+                        contextualPrompt = contextParts.joined(separator: "\n\n") + "\n\nUser question: \(input)"
+                        print("🧠 Enhanced prompt with \(relevantContext.count) context items + \(knowledge.count) knowledge nodes")
+                    }
+                } catch {
+                    print("⚠️ Failed to retrieve context: \(error)")
+                    // Continue with original input if context retrieval fails
+                }
+            }
+
+            // Use parallel orchestrator for multi-provider queries (with contextual prompt)
             let result = try await parallelOrchestrator.queryParallel(
-                input: input,
+                input: contextualPrompt,  // Use enhanced prompt
                 intent: intent,
                 conversationHistory: history,
                 strategy: .race  // Race multiple providers
@@ -172,6 +234,30 @@ final class MrVConsciousness: ObservableObject {
                 isStreaming: false
             )
             await coordinator.appendMessage(assistantMessage)
+
+            // Store conversation in memory system
+            if isMemoryInitialized {
+                Task {
+                    do {
+                        let mood = fluidReality?.moodManager.currentMood.rawValue
+                        try await memorySystem.storeConversation(
+                            userInput: input,  // Store original input, not contextual prompt
+                            aiResponse: currentResponse,
+                            modelUsed: selectedProvider,
+                            responseTime: responseTime,
+                            mood: mood,
+                            intent: intent.description
+                        )
+
+                        // Extract knowledge from conversation
+                        try await memorySystem.extractKnowledgeFromLastConversation()
+
+                        print("💾 Conversation stored in memory")
+                    } catch {
+                        print("❌ Failed to store conversation: \(error)")
+                    }
+                }
+            }
 
             // Schedule background tasks
             Task {
@@ -318,6 +404,37 @@ final class MrVConsciousness: ObservableObject {
         selectedProvider = provider
     }
 
+    // MARK: - Memory Management
+
+    /// Get memory system access
+    func getMemorySystem() -> MemorySystem {
+        return memorySystem
+    }
+
+    /// Create new project
+    func createProject(name: String, description: String? = nil) async throws {
+        let project = try await memorySystem.createProject(name: name, description: description)
+        currentProjectName = project.name
+        print("📁 Project created: \(name)")
+    }
+
+    /// Switch to different project
+    func switchProject(_ projectId: String) async throws {
+        try await memorySystem.switchProject(projectId)
+        currentProjectName = memorySystem.currentProject?.name
+        print("🔄 Switched to project: \(currentProjectName ?? "Unknown")")
+    }
+
+    /// Get all projects
+    func getProjects() async -> [ProjectMemory] {
+        return memorySystem.projects
+    }
+
+    /// Search conversations
+    func searchConversations(keywords: [String]) async throws -> [ConversationMemory] {
+        return try await memorySystem.searchConversations(keywords: keywords)
+    }
+
     // MARK: - Intent Analysis (Future Enhancement)
 
     private func analyzeIntent(_ input: String) -> Intent {
@@ -332,5 +449,15 @@ final class MrVConsciousness: ObservableObject {
         case research
         case creative
         case analysis
+
+        var description: String {
+            switch self {
+            case .conversation: return "conversation"
+            case .coding: return "coding"
+            case .research: return "research"
+            case .creative: return "creative"
+            case .analysis: return "analysis"
+            }
+        }
     }
 }
