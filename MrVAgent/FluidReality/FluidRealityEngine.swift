@@ -15,13 +15,16 @@ final class FluidRealityEngine: ObservableObject {
 
     // MARK: - Internal State
 
-    private var updateTimer: Timer?
+    private var updateTask: Task<Void, Never>?
     private let updateInterval: TimeInterval = 1.0 / 60.0  // 60 FPS
 
     // Text crystallization engine
     private lazy var crystallization: TextCrystallization = {
         TextCrystallization(fluidReality: self)
     }()
+
+    // Mood manager
+    @Published var moodManager = MoodManager()
 
     // MARK: - Void State
 
@@ -49,7 +52,7 @@ final class FluidRealityEngine: ObservableObject {
     }
 
     deinit {
-        updateTimer?.invalidate()
+        updateTask?.cancel()
     }
 
     // MARK: - Void Control
@@ -58,18 +61,21 @@ final class FluidRealityEngine: ObservableObject {
         voidState.isActive = true
         timeState.startTime = Date()
 
-        // Start update loop
-        updateTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.update()
+        // Start update loop with structured concurrency
+        updateTask = Task { @MainActor [weak self] in
+            while let self = self, !Task.isCancelled {
+                await self.update()
+
+                // Sleep for update interval (60 FPS)
+                try? await Task.sleep(nanoseconds: UInt64(updateInterval * 1_000_000_000))
             }
         }
     }
 
     func stopVoid() {
         voidState.isActive = false
-        updateTimer?.invalidate()
-        updateTimer = nil
+        updateTask?.cancel()
+        updateTask = nil
     }
 
     // MARK: - Element Management
@@ -167,6 +173,50 @@ final class FluidRealityEngine: ObservableObject {
 
     func setBreathingIntensity(_ intensity: Float) {
         voidState.breathingIntensity = intensity
+    }
+
+    // MARK: - Universe Theme Application
+
+    /// Apply a complete universe theme to the fluid reality system
+    func applyUniverseTheme(_ theme: UniverseTheme) {
+        print("🎨 Applying universe theme: \(theme.name)")
+
+        // Update background colors
+        setBaseColor(theme.colors.background.color)
+
+        // Update breathing intensity from effects
+        setBreathingIntensity(Float(theme.effects.breathing.intensity))
+
+        // Apply particle configuration
+        // TODO: When ParticleSystem is integrated, update particle settings here
+        // particleSystem?.updateConfiguration(theme.particles)
+
+        // Apply visual effects
+        // TODO: When blur/glow effects are integrated, update them here
+        // blurEffect?.updateIntensity(theme.effects.blur.intensity)
+        // glowEffect?.updateIntensity(theme.effects.glow.intensity)
+
+        // Update mood if theme has default mood
+        let defaultMood = theme.mood.defaultMood
+        if let mood = MoodState(rawValue: defaultMood) {
+            moodManager.setMoodImmediate(mood)
+        }
+
+        print("✅ Universe theme applied successfully")
+    }
+
+    /// Gradually transition to a new universe theme
+    func transitionToUniverseTheme(_ theme: UniverseTheme, duration: TimeInterval = 2.0) async {
+        print("🌀 Transitioning to universe theme: \(theme.name) over \(duration)s")
+
+        // For now, apply immediately
+        // TODO: Implement smooth color/effect interpolation
+        applyUniverseTheme(theme)
+
+        // Wait for duration to simulate transition
+        try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+
+        print("✅ Universe theme transition complete")
     }
 
     // MARK: - Element Queries

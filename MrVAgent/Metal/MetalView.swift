@@ -6,6 +6,9 @@ import MetalKit
 struct MetalView: NSViewRepresentable {
 
     @Binding var cursorPosition: CGPoint
+    var backgroundColor: Color = Color(red: 0.02, green: 0.02, blue: 0.05)
+    var primaryColor: Color = Color(red: 0.05, green: 0.05, blue: 0.1)
+    var breathingIntensity: Float = 0.3
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -19,7 +22,15 @@ struct MetalView: NSViewRepresentable {
         mtkView.enableSetNeedsDisplay = false
         mtkView.isPaused = false
         mtkView.framebufferOnly = true
-        mtkView.clearColor = MTLClearColor(red: 0.02, green: 0.02, blue: 0.05, alpha: 1.0)
+
+        // Set initial clear color from theme
+        let bgComponents = backgroundColor.cgColor?.components ?? [0.02, 0.02, 0.05, 1.0]
+        mtkView.clearColor = MTLClearColor(
+            red: Double(bgComponents[0]),
+            green: Double(bgComponents[1]),
+            blue: Double(bgComponents[2]),
+            alpha: Double(bgComponents[safe: 3] ?? 1.0)
+        )
         mtkView.coordinator = context.coordinator
 
         return mtkView
@@ -28,6 +39,26 @@ struct MetalView: NSViewRepresentable {
     func updateNSView(_ nsView: MTKView, context: Context) {
         // Update cursor position in coordinator
         context.coordinator.cursorPosition = cursorPosition
+
+        // Update theme colors in renderer
+        let bgComponents = backgroundColor.cgColor?.components ?? [0.02, 0.02, 0.05, 1.0]
+        let primaryComponents = primaryColor.cgColor?.components ?? [0.05, 0.05, 0.1, 1.0]
+
+        context.coordinator.renderer.setBaseColor(
+            r: Float(primaryComponents[0]),
+            g: Float(primaryComponents[1]),
+            b: Float(primaryComponents[2])
+        )
+
+        context.coordinator.renderer.setBreathingIntensity(breathingIntensity)
+
+        // Update clear color
+        nsView.clearColor = MTLClearColor(
+            red: Double(bgComponents[0]),
+            green: Double(bgComponents[1]),
+            blue: Double(bgComponents[2]),
+            alpha: Double(bgComponents[safe: 3] ?? 1.0)
+        )
     }
 
     // MARK: - Custom MTKView with Mouse Tracking

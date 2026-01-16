@@ -12,6 +12,7 @@ final class MetalRenderer: NSObject {
     private let commandQueue: MTLCommandQueue
     private var pipelineState: MTLRenderPipelineState?
     private var startTime: CFAbsoluteTime
+    private var particleSystem: ParticleSystem?
 
     // MARK: - Uniforms
 
@@ -22,6 +23,9 @@ final class MetalRenderer: NSObject {
         var baseColor: SIMD3<Float>
         var breathingIntensity: Float
         var noiseScale: Float
+        var cursorVelocity: SIMD2<Float>
+        var cursorHistory: (SIMD2<Float>, SIMD2<Float>, SIMD2<Float>, SIMD2<Float>, SIMD2<Float>,
+                           SIMD2<Float>, SIMD2<Float>, SIMD2<Float>, SIMD2<Float>, SIMD2<Float>)
     }
 
     private var uniforms = BackgroundUniforms(
@@ -30,8 +34,19 @@ final class MetalRenderer: NSObject {
         cursorPosition: SIMD2<Float>(0.5, 0.5),
         baseColor: SIMD3<Float>(0.05, 0.05, 0.1), // Deep blue-black
         breathingIntensity: 0.3,
-        noiseScale: 1.0
+        noiseScale: 1.0,
+        cursorVelocity: SIMD2<Float>(0, 0),
+        cursorHistory: (
+            SIMD2<Float>(0.5, 0.5), SIMD2<Float>(0.5, 0.5), SIMD2<Float>(0.5, 0.5),
+            SIMD2<Float>(0.5, 0.5), SIMD2<Float>(0.5, 0.5), SIMD2<Float>(0.5, 0.5),
+            SIMD2<Float>(0.5, 0.5), SIMD2<Float>(0.5, 0.5), SIMD2<Float>(0.5, 0.5),
+            SIMD2<Float>(0.5, 0.5)
+        )
     )
+
+    // Cursor tracking
+    private var lastCursorPosition: SIMD2<Float> = SIMD2<Float>(0.5, 0.5)
+    private var lastUpdateTime: CFAbsoluteTime = 0
 
     // MARK: - Initialization
 
@@ -53,9 +68,14 @@ final class MetalRenderer: NSObject {
         super.init()
 
         setupPipeline()
+        setupParticleSystem()
     }
 
     // MARK: - Pipeline Setup
+
+    private func setupParticleSystem() {
+        particleSystem = ParticleSystem(device: device, commandQueue: commandQueue)
+    }
 
     private func setupPipeline() {
         guard let library = device.makeDefaultLibrary() else {
@@ -88,10 +108,43 @@ final class MetalRenderer: NSObject {
         uniforms.resolution = SIMD2<Float>(Float(viewSize.width), Float(viewSize.height))
 
         // Normalize cursor position to 0-1 range
-        uniforms.cursorPosition = SIMD2<Float>(
+        let normalizedCursor = SIMD2<Float>(
             Float(cursorPosition.x / viewSize.width),
             Float(cursorPosition.y / viewSize.height)
         )
+
+        // Calculate velocity
+        let timeDelta = Float(currentTime - (lastUpdateTime > 0 ? lastUpdateTime : currentTime))
+        if timeDelta > 0 {
+            uniforms.cursorVelocity = (normalizedCursor - lastCursorPosition) / timeDelta
+        }
+
+        // Update cursor history (shift array)
+        uniforms.cursorHistory = (
+            normalizedCursor,
+            uniforms.cursorHistory.0,
+            uniforms.cursorHistory.1,
+            uniforms.cursorHistory.2,
+            uniforms.cursorHistory.3,
+            uniforms.cursorHistory.4,
+            uniforms.cursorHistory.5,
+            uniforms.cursorHistory.6,
+            uniforms.cursorHistory.7,
+            uniforms.cursorHistory.8
+        )
+
+        uniforms.cursorPosition = normalizedCursor
+        lastCursorPosition = normalizedCursor
+        lastUpdateTime = currentTime
+
+        // Emit cursor trail particles if moving fast enough
+        let speed = length(uniforms.cursorVelocity)
+        if speed > 0.3 {  // Threshold for particle emission
+            emitParticles(at: cursorPosition, count: 2, type: .cursorTrail)
+        }
+
+        // Update particle system
+        particleSystem?.update(deltaTime: Float(deltaTime), viewSize: viewSize)
     }
 
     /// Update base color (for mood changes)
@@ -140,9 +193,24 @@ final class MetalRenderer: NSObject {
                                      vertexStart: 0,
                                      vertexCount: 4)
 
+        // Render particles on top of background
+        particleSystem?.render(to: renderEncoder)
+
         renderEncoder.endEncoding()
 
         commandBuffer.present(drawable)
         commandBuffer.commit()
+    }
+
+    // MARK: - Particle Control
+
+    /// Emit particles at a specific position
+    func emitParticles(at position: CGPoint, count: Int, type: ParticleSystem.ParticleType) {
+        particleSystem?.emit(at: position, count: count, type: type)
+    }
+
+    /// Get active particle count
+    var activeParticleCount: Int {
+        particleSystem?.activeCount ?? 0
     }
 }

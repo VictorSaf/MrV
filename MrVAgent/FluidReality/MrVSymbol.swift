@@ -4,6 +4,7 @@ import SwiftUI
 struct MrVSymbolView: View {
     @State private var pulsePhase: CGFloat = 0
     @State private var rotationAngle: Double = 0
+    var accentColor: Color = .white
 
     var body: some View {
         ZStack {
@@ -12,8 +13,8 @@ struct MrVSymbolView: View {
                 .stroke(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.3),
-                            Color.blue.opacity(0.2)
+                            accentColor.opacity(0.3),
+                            accentColor.opacity(0.2)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -25,15 +26,15 @@ struct MrVSymbolView: View {
 
             // Inner symbol (abstract V)
             VShape()
-                .stroke(Color.white.opacity(0.8), lineWidth: 2)
+                .stroke(accentColor.opacity(0.8), lineWidth: 2)
                 .frame(width: 30, height: 30)
                 .rotationEffect(.degrees(rotationAngle))
 
             // Center dot
             Circle()
-                .fill(Color.white.opacity(0.6 + pulsePhase * 0.3))
+                .fill(accentColor.opacity(0.6 + pulsePhase * 0.3))
                 .frame(width: 6, height: 6)
-                .shadow(color: .white.opacity(0.5), radius: 4)
+                .shadow(color: accentColor.opacity(0.5), radius: 4)
         }
         .onAppear {
             // Pulsing animation
