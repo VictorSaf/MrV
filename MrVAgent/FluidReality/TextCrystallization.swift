@@ -28,16 +28,16 @@ final class TextCrystallization: ObservableObject {
 
     // MARK: - Configuration
 
-    struct CrystallizationConfig {
+    nonisolated struct CrystallizationConfig {
         var charactersPerSecond: Double = 30.0  // Speed of typing
         var blurRadius: CGFloat = 8.0           // Initial blur for new characters
         var blurDecayDuration: Double = 0.2     // Time for blur to fade
         var scaleEffect: CGFloat = 1.1          // Initial scale (subtle pop)
         var scaleDecayDuration: Double = 0.15   // Time for scale to normalize
 
-        static let `default` = CrystallizationConfig()
-        static let fast = CrystallizationConfig(charactersPerSecond: 60.0)
-        static let slow = CrystallizationConfig(charactersPerSecond: 15.0)
+        nonisolated static let `default` = CrystallizationConfig()
+        nonisolated static let fast = CrystallizationConfig(charactersPerSecond: 60.0)
+        nonisolated static let slow = CrystallizationConfig(charactersPerSecond: 15.0)
     }
 
     // MARK: - Active Crystallizations
