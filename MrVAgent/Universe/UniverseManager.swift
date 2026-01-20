@@ -209,7 +209,7 @@ final class UniverseManager: ObservableObject {
     // MARK: - Subsystem Updates
 
     private func updateParticleSystem(with config: ParticleConfiguration) async {
-        guard let fluidReality = fluidReality else { return }
+        guard fluidReality != nil else { return }
 
         print("💫 Updating particle system: \(config.density.rawValue), \(config.behavior.rawValue)")
 
@@ -219,7 +219,7 @@ final class UniverseManager: ObservableObject {
     }
 
     private func updateMoodSystem(with config: MoodConfiguration) async {
-        guard let fluidReality = fluidReality else { return }
+        guard fluidReality != nil else { return }
 
         print("🎭 Updating mood configuration: default=\(config.defaultMood)")
 
@@ -230,7 +230,7 @@ final class UniverseManager: ObservableObject {
     }
 
     private func applyVisualEffects(_ effects: VisualEffects) async {
-        guard let fluidReality = fluidReality else { return }
+        guard fluidReality != nil else { return }
 
         print("✨ Applying visual effects: blur=\(effects.blur.enabled), glow=\(effects.glow.enabled)")
 

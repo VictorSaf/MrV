@@ -240,7 +240,7 @@ final class AbstractionEngine: ObservableObject {
     private func calculateAbstractPosition(for element: UIElement) -> CGPoint {
         // Intelligent positioning based on element type and context
         // Avoid traditional grid layouts
-        guard let fluidReality = fluidReality else {
+        guard fluidReality != nil else {
             return CGPoint(x: 640, y: 400)  // Default center
         }
 

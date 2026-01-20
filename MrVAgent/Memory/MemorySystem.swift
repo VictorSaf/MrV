@@ -232,7 +232,7 @@ class MemorySystem: ObservableObject {
             Task {
                 if let decision = await decisionDetector.detectDecision(from: conversation) {
                     do {
-                        try await storeDecision(
+                        _ = try await storeDecision(
                             decisionText: decision.decisionText,
                             rationale: decision.rationale,
                             alternatives: decision.alternatives,
@@ -414,7 +414,7 @@ class MemorySystem: ObservableObject {
 
         // Get most used provider
         var providerSQL = "SELECT model_used, COUNT(*) as count FROM conversations"
-        if let targetProjectId = targetProjectId {
+        if targetProjectId != nil {
             providerSQL += " WHERE project_id = ?"
         }
         providerSQL += " GROUP BY model_used ORDER BY count DESC LIMIT 1"

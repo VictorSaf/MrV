@@ -337,7 +337,7 @@ final class AutonomousEvolution: ObservableObject {
         // Simple pattern identification
         var patterns: [String] = []
 
-        if let memorySystem = memorySystem {
+        if memorySystem != nil {
             // Check for recurring topics, question types, etc.
             // This is simplified - real implementation would use ML
             patterns.append("Users frequently ask about implementation details")
