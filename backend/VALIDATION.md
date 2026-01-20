@@ -122,7 +122,7 @@ docker-compose up -d  # Starts Neo4j
 
 ### Swift App
 1. Open MrVAgengtXcode/MrVAgent/MrVAgent.xcodeproj
-2. Ensure backend is running on localhost:8000
+2. Ensure backend is running on localhost:8001
 3. Build and run
 
 ## Success Metrics
