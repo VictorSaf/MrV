@@ -79,9 +79,9 @@ docker-compose up -d
 python run.py
 ```
 
-Server starts on `http://localhost:8000`
+Server starts on `http://localhost:8001`
 
-API Documentation: `http://localhost:8000/docs`
+API Documentation: `http://localhost:8001/docs`
 
 ## Testing
 
