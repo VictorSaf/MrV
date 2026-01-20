@@ -121,10 +121,11 @@ class TemporalKnowledgeGraph:
             # In-memory implementation
             deps = []
             for rel in self.relationships:
-                if rel["from_id"] == entity_id and rel["type"] in ["BLOCKS", "DEPENDS_ON"]:
-                    to_entity = self.entities.get(rel["to_id"])
-                    if to_entity:
-                        deps.append((to_entity, rel))
+                # Look for relationships pointing TO this entity (predecessors/dependencies)
+                if rel["to_id"] == entity_id and rel["type"] in ["BLOCKS", "DEPENDS_ON", "PRECEDES"]:
+                    from_entity = self.entities.get(rel["from_id"])
+                    if from_entity:
+                        deps.append((from_entity, rel))
             return deps
         else:
             # Neo4j implementation
