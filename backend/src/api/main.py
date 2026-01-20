@@ -18,4 +18,4 @@ app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    return {"status": "healthy", "environment": "development"}
