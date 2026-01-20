@@ -4,7 +4,7 @@ import Combine
 
 @MainActor
 final class AuthViewModel: ObservableObject {
-    @Published var isAuthenticated = false
+    @Published var isAuthenticated = !FeatureFlags.authenticationEnabled
     @Published var passwordExists = false
     @Published var errorMessage: String?
     @Published var isLoading = false
@@ -12,7 +12,9 @@ final class AuthViewModel: ObservableObject {
     private let authService = AuthenticationService.shared
 
     init() {
-        checkPasswordExists()
+        if FeatureFlags.authenticationEnabled {
+            checkPasswordExists()
+        }
     }
 
     func checkPasswordExists() {

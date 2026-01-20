@@ -4,6 +4,7 @@ import SwiftUI
 struct MrVAgentApp: App {
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var fluidReality = FluidRealityEngine()
+    @StateObject private var settingsManager = SettingsManager()
 
     var body: some Scene {
         WindowGroup {
@@ -11,6 +12,7 @@ struct MrVAgentApp: App {
                 if authViewModel.isAuthenticated {
                     VoidView()
                         .environmentObject(fluidReality)
+                        .environmentObject(settingsManager)
                 } else {
                     AuthenticationView()
                         .environmentObject(authViewModel)
@@ -29,7 +31,7 @@ struct MrVAgentApp: App {
                 Divider()
 
                 Button("Settings...") {
-                    // Settings will be opened via toolbar button in MainView
+                    settingsManager.openSettings()
                 }
                 .keyboardShortcut(",", modifiers: .command)
 

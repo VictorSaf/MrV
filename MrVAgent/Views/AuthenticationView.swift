@@ -3,6 +3,7 @@ import SwiftUI
 struct AuthenticationView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @State private var password = ""
+    @FocusState private var isPasswordFocused: Bool
 
     var body: some View {
         VStack(spacing: 30) {
@@ -29,6 +30,8 @@ struct AuthenticationView: View {
                 )
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 300)
+                .focused($isPasswordFocused)
+                .focusable(true)
                 .onSubmit {
                     handleSubmit()
                 }
@@ -56,6 +59,13 @@ struct AuthenticationView: View {
         }
         .padding(60)
         .frame(width: 500, height: 450)
+        .focusable()
+        .onAppear {
+            // Auto-focus password field after a brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                isPasswordFocused = true
+            }
+        }
     }
 
     private func handleSubmit() {

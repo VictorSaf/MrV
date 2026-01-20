@@ -3,10 +3,12 @@ import SwiftUI
 /// Main void interface - abstract fluid reality system
 struct VoidView: View {
     @EnvironmentObject var fluidReality: FluidRealityEngine
+    @EnvironmentObject var settingsManager: SettingsManager
     @StateObject private var consciousness: MrVConsciousness
     @State private var cursorPosition: CGPoint = .zero
     @State private var viewSize: CGSize = .zero
     @State private var currentTheme: UniverseTheme = .void
+    @State private var showAPIKeyWarning = false
 
     init() {
         // Initialize consciousness (will be connected to fluidReality in onAppear)
@@ -62,6 +64,11 @@ struct VoidView: View {
                 // Invisible input (handled separately)
                 InvisibleInputView()
                     .environmentObject(consciousness)
+
+                // API Key warning indicator (bottom-left, theme-aware)
+                if showAPIKeyWarning {
+                    APIKeyWarningView(theme: currentTheme)
+                }
             }
             .preferredColorScheme(.dark)
             .onAppear {
@@ -70,6 +77,8 @@ struct VoidView: View {
                 consciousness.setFluidReality(fluidReality)
                 // Set initial theme
                 currentTheme = consciousness.currentUniverse
+                // Check API keys configuration
+                checkAPIKeysConfigured()
             }
             .onChange(of: geometry.size) { newSize in
                 viewSize = newSize
@@ -80,7 +89,20 @@ struct VoidView: View {
                     currentTheme = newUniverse
                 }
             }
+            .sheet(isPresented: $settingsManager.showSettings) {
+                SettingsView()
+            }
         }
+    }
+
+    // MARK: - Helper Methods
+
+    private func checkAPIKeysConfigured() {
+        let keychainService = KeychainService.shared
+        let hasAnyKey = AIProvider.allCases.contains { provider in
+            provider.requiresAPIKey && keychainService.apiKeyExists(for: provider.rawValue)
+        }
+        showAPIKeyWarning = !hasAnyKey
     }
 }
 
