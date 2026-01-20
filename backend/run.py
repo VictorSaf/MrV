@@ -30,7 +30,7 @@ def find_available_port(start_port: int, host: str = "0.0.0.0", max_attempts: in
 
 if __name__ == "__main__":
     host = "0.0.0.0"
-    preferred_port = 8000
+    preferred_port = 8001
 
     # Check if preferred port is available
     if is_port_available(preferred_port, host):
